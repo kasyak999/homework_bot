@@ -1,4 +1,5 @@
-...
+from telebot import TeleBot
+
 
 load_dotenv()
 
