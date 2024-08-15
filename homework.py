@@ -24,7 +24,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
-
+TIME_SLEEP = 10 * 60
 
 HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
@@ -108,7 +108,7 @@ def main():
     while True:
         # try:
             answer_api = get_api_answer(timestamp)
-            time.sleep(1)
+            time.sleep(TIME_SLEEP)
             qwe = check_response(answer_api)
             print(parse_status(qwe))
     #         # if result != get_api_answer(timestamp):
