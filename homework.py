@@ -87,6 +87,7 @@ def parse_status(homework):
             'Нет значения homework_name.'
         )
     elif verdict is None or verdict not in HOMEWORK_VERDICTS:
+        logging.debug('Нет значения status.')
         raise err.NoEnvironmentVariable(
             'Нет значения status.'
         )
@@ -94,7 +95,8 @@ def parse_status(homework):
         verdict = HOMEWORK_VERDICTS[homework.get('status')]
     except KeyError:
         verdict = 'Статус не определен'
-        raise err.NoEnvironmentVariable('Неизвестный статус работы.')
+        logging.debug(verdict)
+        raise err.NoEnvironmentVariable(verdict)
     finally:
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -105,18 +107,27 @@ def main():
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int((datetime.now() - timedelta(days=20)).timestamp())
     check_tokens()
+    status = None
     while True:
-        # try:
-            answer_api = get_api_answer(timestamp)
-            time.sleep(TIME_SLEEP)
-            qwe = check_response(answer_api)
-            print(parse_status(qwe))
+        try:
+            answer_api = check_response(get_api_answer(timestamp))
+            # check = check_response(answer_api)
+            # result = parse_status(check)
+
+            # if result == parse_status(check):
+            #     send_message(bot, parse_status(check))
     #         # if result != get_api_answer(timestamp):
     #         #     # send_message(bot,)
     #         #     print(parse_status(result[0]))
 
-        # except Exception as error:
-        #     message = f'Сбой в работе программы: {error}'
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
+        else:
+            if status != answer_api.get('status'):
+                send_message(bot, parse_status(answer_api))
+            status = answer_api.get('status')
+        finally:
+            time.sleep(TIME_SLEEP)
 
 
 if __name__ == '__main__':
