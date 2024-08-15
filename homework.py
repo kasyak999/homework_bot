@@ -47,32 +47,56 @@ def check_tokens():
 def send_message(bot, message):
     """Ответ бота."""
     bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    logging.debug('Сообщение отправлено')
 
 
 def get_api_answer(timestamp):
-    """Ображение к API практикума."""
+    """Обращение к API."""
     payload = {'from_date': timestamp}
     try:
-        homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-        result = homework_statuses.json()
-        return check_response(result.get('homeworks'))
-    except Exception as error:
-        logging.error(f'Ошибка API: {error}')
-        print(f'Ошибка подключения к API {error}')
+        homework_statuses = requests.get(
+            url=ENDPOINT, headers=HEADERS, params=payload
+        )
+    except requests.RequestException as error:
+        print(f'Произошла ошибка при отправке запроса: {error}')
+        logging.critical(f'Ошибка API: {error}')
+    else:
+        if homework_statuses.status_code != 200:
+            error = f'Код ответа Api: {homework_statuses.status_code}'
+            logging.error(error)
+            raise err.NoEnvironmentVariable(error)
+        return homework_statuses.json()
 
 
 def check_response(response):
-    print(111)
-    print(response)
-    # return response.get('homeworks')
-    # if response is not None:
-    #     print('ничего нет')
+    """Проверяет ответ API."""
+    if not isinstance(response, dict):
+        raise TypeError(f'Ответ сервера не словарь {type(response)}')
+    homeworks = response.get('homeworks')
+    if not isinstance(homeworks, list):
+        raise TypeError(f'Ответ сервера не список {type(homeworks)}')
+    return homeworks[0]
 
 
 def parse_status(homework):
+    """Извлекает из информации о конкретной домашней работе статус этой работы."""
     homework_name = homework.get('homework_name')
-    verdict = HOMEWORK_VERDICTS[homework.get('status')]
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    verdict = homework.get('status')
+    if homework_name is None:
+        raise err.NoEnvironmentVariable(
+            'Нет значения homework_name.'
+        )
+    elif verdict is None or verdict not in HOMEWORK_VERDICTS:
+        raise err.NoEnvironmentVariable(
+            'Нет значения status.'
+        )
+    try:
+        verdict = HOMEWORK_VERDICTS[homework.get('status')]
+    except KeyError:
+        verdict = 'Статус не определен'
+        raise err.NoEnvironmentVariable('Неизвестный статус работы.')
+    finally:
+        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
@@ -81,19 +105,18 @@ def main():
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int((datetime.now() - timedelta(days=20)).timestamp())
     check_tokens()
-    # print(get_api_answer(timestamp))
-    # print(parse_status(get_api_answer(timestamp)[0]))
-    # send_message(bot, parse_status(get_api_answer(timestamp)[0]))
     while True:
-        try:
-            result = get_api_answer(timestamp)
+        # try:
+            answer_api = get_api_answer(timestamp)
             time.sleep(1)
-            if result == get_api_answer(timestamp):
-                send_message(bot,)
-                print(parse_status(result[0]))
+            qwe = check_response(answer_api)
+            print(parse_status(qwe))
+    #         # if result != get_api_answer(timestamp):
+    #         #     # send_message(bot,)
+    #         #     print(parse_status(result[0]))
 
-        except Exception as error:
-            message = f'Сбой в работе программы: {error}'
+        # except Exception as error:
+        #     message = f'Сбой в работе программы: {error}'
 
 
 if __name__ == '__main__':

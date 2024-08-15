@@ -1,4 +1,6 @@
-
 class NoEnvironmentVariable(Exception):
-    """Ошибка перменых окружения"""
+    """Ошибка перменых окружения."""
 
+
+class NoРomework(Exception):
+    """Нет домашних заданий."""
