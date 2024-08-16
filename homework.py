@@ -130,6 +130,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
+            send_message(bot, message)
         else:
             if status != answer_api.get('status'):
                 send_message(bot, parse_status(answer_api))
