@@ -78,6 +78,8 @@ def check_response(response):
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
         raise TypeError(f'Ответ сервера не список {type(homeworks)}')
+    if not homeworks:
+        logging.debug("Нет информации.")
     return homeworks[0]
 
 
@@ -115,21 +117,13 @@ def main():
     while True:
         try:
             answer_api = check_response(get_api_answer(timestamp))
-            # check = check_response(answer_api)
-            # result = parse_status(check)
-
-            # if result == parse_status(check):
-            #     send_message(bot, parse_status(check))
-    #         # if result != get_api_answer(timestamp):
-    #         #     # send_message(bot,)
-    #         #     print(parse_status(result[0]))
-
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
+            logging.error(message)
         else:
             if status != answer_api.get('status'):
                 send_message(bot, parse_status(answer_api))
-                logging.debug('Статус не изменился.')
+                logging.debug('Статус изменился.')
             status = answer_api.get('status')
         finally:
             time.sleep(TIME_SLEEP)
