@@ -13,7 +13,10 @@ logging.basicConfig(
     level=logging.DEBUG,
     filename='program.log',
     filemode='w',
-    format='(%(filename)s -> %(funcName)s -> %(lineno)s) %(asctime)s, %(name)s: %(levelname)s - %(message)s'
+    format=(
+        '(%(filename)s -> %(funcName)s -> %(lineno)s)'
+        '%(asctime)s, %(name)s: %(levelname)s - %(message)s'
+    )
 )
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
@@ -83,7 +86,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Извлекает из информации о конкретной домашней работе статус этой работы."""
+    """Извлекает из информации."""
     homework_name = homework.get('homework_name')
     verdict = homework.get('status')
     if homework_name is None:
