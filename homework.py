@@ -46,8 +46,11 @@ def check_tokens():
 
 def send_message(bot, message):
     """Ответ бота."""
-    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-    logging.debug('Сообщение отправлено')
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        logging.debug('Сообщение отправлено')
+    except Exception as error:
+        logging.error(error)
 
 
 def get_api_answer(timestamp):
@@ -83,6 +86,7 @@ def parse_status(homework):
     homework_name = homework.get('homework_name')
     verdict = homework.get('status')
     if homework_name is None:
+        logging.debug('Нет значения homework_name.')
         raise err.NoEnvironmentVariable(
             'Нет значения homework_name.'
         )
@@ -125,6 +129,7 @@ def main():
         else:
             if status != answer_api.get('status'):
                 send_message(bot, parse_status(answer_api))
+                logging.debug('Статус не изменился.')
             status = answer_api.get('status')
         finally:
             time.sleep(TIME_SLEEP)
