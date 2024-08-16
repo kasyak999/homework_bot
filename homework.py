@@ -1,8 +1,7 @@
 from telebot import TeleBot
 import os
 from dotenv import load_dotenv
-from pprint import pprint
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 import requests
 import exceptions as err
 import logging
