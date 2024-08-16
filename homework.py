@@ -7,6 +7,7 @@ import exceptions as err
 import logging
 import time
 
+
 load_dotenv()
 # Здесь задана глобальная конфигурация для всех логгеров:
 logging.basicConfig(
@@ -41,8 +42,10 @@ def check_tokens():
         logging.critical('Не указан токен практикума')
         raise err.NoEnvironmentVariable('Не указан токен практикума')
     elif TELEGRAM_TOKEN is None:
+        logging.critical('Не указан токен телеграмм')
         raise err.NoEnvironmentVariable('Не указан токен телеграм бота')
     elif TELEGRAM_CHAT_ID is None:
+        logging.critical('Не указан chat_id')
         raise err.NoEnvironmentVariable('Не указан ваш id')
 
 
@@ -63,8 +66,7 @@ def get_api_answer(timestamp):
             url=ENDPOINT, headers=HEADERS, params=payload
         )
     except requests.RequestException as error:
-        print(f'Произошла ошибка при отправке запроса: {error}')
-        logging.critical(f'Ошибка API: {error}')
+        logging.error(error)
     else:
         if homework_statuses.status_code != 200:
             error = f'Код ответа Api: {homework_statuses.status_code}'
@@ -76,10 +78,16 @@ def get_api_answer(timestamp):
 def check_response(response):
     """Проверяет ответ API."""
     if not isinstance(response, dict):
-        raise TypeError(f'Ответ сервера не словарь {type(response)}')
+        error = f'Ответ сервера, не является словарем {type(response)}'
+        logging.error(error)
+        raise TypeError(error)
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
-        raise TypeError(f'Ответ сервера не список {type(homeworks)}')
+        error = (
+            f'Ответ сервера: homeworks не является списком {type(homeworks)}'
+        )
+        logging.error(error)
+        raise TypeError(error)
     if not homeworks:
         logging.debug("Нет информации.")
     return homeworks[0]
@@ -113,7 +121,7 @@ def main():
     """Основная логика работы бота."""
     # Создаем объект класса бота
     bot = TeleBot(token=TELEGRAM_TOKEN)
-    timestamp = int((datetime.now() - timedelta(days=20)).timestamp())
+    timestamp = int((datetime.now() - timedelta(days=2)).timestamp())
     check_tokens()
     status = None
     while True:
