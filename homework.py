@@ -1,4 +1,4 @@
-from telebot import TeleBot
+from telebot import TeleBot, apihelper
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -6,26 +6,16 @@ import requests
 import exceptions as err
 import logging
 import time
+from pprint import pprint
 
 
 load_dotenv()
-# Здесь задана глобальная конфигурация для всех логгеров:
-logging.basicConfig(
-    level=logging.DEBUG,
-    filename='program.log',
-    filemode='w',
-    format=(
-        '(%(filename)s -> %(funcName)s -> %(lineno)s)'
-        '%(asctime)s, %(name)s: %(levelname)s - %(message)s'
-    )
-)
-
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses1/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 TIME_SLEEP = 10 * 60
 
@@ -38,24 +28,28 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка переменых окружения."""
-    if PRACTICUM_TOKEN is None:
-        logging.critical('Не указан токен практикума')
-        raise err.NoEnvironmentVariable('Не указан токен практикума')
-    elif TELEGRAM_TOKEN is None:
-        logging.critical('Не указан токен телеграмм')
-        raise err.NoEnvironmentVariable('Не указан токен телеграм бота')
-    elif TELEGRAM_CHAT_ID is None:
-        logging.critical('Не указан chat_id')
-        raise err.NoEnvironmentVariable('Не указан ваш id')
+    if not globals()['PRACTICUM_TOKEN']:
+        mistake = 'Токен практикума не задан в файле .env'
+        logging.critical(mistake)
+        raise ValueError(mistake)
+    elif not globals()['TELEGRAM_TOKEN']:
+        mistake = 'Токен телеграм бота не задан в файле .env'
+        logging.critical(mistake)
+        raise ValueError(mistake)
+    elif not globals()['TELEGRAM_CHAT_ID']:
+        mistake = 'chat_id не задан в файле .env'
+        logging.critical(mistake)
+        raise ValueError(mistake)
 
 
 def send_message(bot, message):
     """Ответ бота."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    except apihelper.ApiTelegramException as error:
+        raise
+    else:
         logging.debug('Сообщение отправлено')
-    except Exception as error:
-        logging.error(error)
 
 
 def get_api_answer(timestamp):
@@ -65,13 +59,12 @@ def get_api_answer(timestamp):
         homework_statuses = requests.get(
             url=ENDPOINT, headers=HEADERS, params=payload
         )
-    except requests.RequestException as error:
-        logging.error(error)
+    except requests.RequestException as mistake:
+        logging.error(mistake)
     else:
         if homework_statuses.status_code != 200:
-            error = f'Код ответа Api: {homework_statuses.status_code}'
-            logging.error(error)
-            raise err.NoEnvironmentVariable(error)
+            mistake = f'код ответа Api {homework_statuses.status_code}'
+            raise err.NoEnvironmentVariable(mistake)
         return homework_statuses.json()
 
 
@@ -124,21 +117,34 @@ def main():
     timestamp = int((datetime.now() - timedelta(days=2)).timestamp())
     check_tokens()
     status = None
+    error_shipped = None
     while True:
         try:
             answer_api = check_response(get_api_answer(timestamp))
-        except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            logging.error(message)
-            send_message(bot, message)
-        else:
             if status != answer_api.get('status'):
                 send_message(bot, parse_status(answer_api))
                 logging.debug('Статус изменился.')
             status = answer_api.get('status')
-        finally:
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
+            logging.error(message)
+            if error != error_shipped:
+                # send_message(bot, message)
+                print(error)
+            error_shipped = error
+        else:
             time.sleep(TIME_SLEEP)
 
 
 if __name__ == '__main__':
+    # Здесь задана глобальная конфигурация для всех логгеров:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename='program.log',
+        filemode='w',
+        format=(
+            '(%(filename)s -> %(funcName)s -> %(lineno)s)'
+            '%(asctime)s, %(name)s: %(levelname)s - %(message)s'
+        )
+    )
     main()
