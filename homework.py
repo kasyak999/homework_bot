@@ -45,7 +45,7 @@ def send_message(bot, message):
     """Ответ бота."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-    except apihelper.ApiTelegramException as error:
+    except apihelper.ApiTelegramException:
         raise
     else:
         logging.debug('Сообщение отправлено')
