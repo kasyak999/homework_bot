@@ -48,7 +48,7 @@ def send_message(bot, message):
         bot.send_message(chat_id=globals()['TELEGRAM_CHAT_ID'], text=message)
         logging.debug('Сообщение отправлено')
     except apihelper.ApiTelegramException as error:
-        message = f'ошибка телграм бота {error}'
+        message = f'ошибка телграм бота\n{error}'
         raise Exception(message) from error
 
 
