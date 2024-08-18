@@ -3,10 +3,9 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import requests
-import exceptions as err
 import logging
 import time
-from pprint import pprint
+# from pprint import pprint
 
 
 load_dotenv()
@@ -15,7 +14,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses1/'
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 TIME_SLEEP = 10 * 60
 
@@ -57,56 +56,52 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         homework_statuses = requests.get(
-            url=ENDPOINT, headers=HEADERS, params=payload
+            url=globals()['ENDPOINT'], headers=globals()['HEADERS'],
+            params=payload
         )
-    except requests.RequestException as mistake:
-        logging.error(mistake)
-    else:
         if homework_statuses.status_code != 200:
-            mistake = f'код ответа Api {homework_statuses.status_code}'
-            raise err.NoEnvironmentVariable(mistake)
+            raise requests.exceptions.HTTPError(
+                f'код ответа Api {homework_statuses.status_code}'
+            )
+    except requests.RequestException as error:
+        message = f''' Ошибка при запросе к API
+            url={globals()['ENDPOINT']},
+            headers={globals()['HEADERS']},
+            params={payload}.
+            {error}'''
+        raise Exception(message) from error
+    else:
         return homework_statuses.json()
 
 
 def check_response(response):
     """Проверяет ответ API."""
     if not isinstance(response, dict):
-        error = f'Ответ сервера, не является словарем {type(response)}'
-        logging.error(error)
-        raise TypeError(error)
+        raise TypeError(
+            f'ответ сервера, не является словарем {type(response)}'
+        )
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
-        error = (
-            f'Ответ сервера: homeworks не является списком {type(homeworks)}'
+        raise TypeError(
+            f'ответ сервера, homeworks не является списком {type(homeworks)}'
         )
-        logging.error(error)
-        raise TypeError(error)
     if not homeworks:
-        logging.debug("Нет информации.")
+        raise TypeError('в ответе сервера нет информации.')
     return homeworks[0]
 
 
 def parse_status(homework):
     """Извлекает из информации."""
-    homework_name = homework.get('homework_name')
-    verdict = homework.get('status')
-    if homework_name is None:
-        logging.debug('Нет значения homework_name.')
-        raise err.NoEnvironmentVariable(
-            'Нет значения homework_name.'
-        )
-    elif verdict is None or verdict not in HOMEWORK_VERDICTS:
-        logging.debug('Нет значения status.')
-        raise err.NoEnvironmentVariable(
-            'Нет значения status.'
-        )
     try:
-        verdict = HOMEWORK_VERDICTS[homework.get('status')]
+        homework_name = homework.get('homework_name')
+        if not homework.get('homework_name'):
+            raise ValueError(
+                'в ответе сервера нет значения homework_name.'
+            )
+        verdict = globals()['HOMEWORK_VERDICTS'][homework.get('status')]
     except KeyError:
-        verdict = 'Статус не определен'
-        logging.debug(verdict)
-        raise err.NoEnvironmentVariable(verdict)
-    finally:
+        raise KeyError('Статус не определен')
+    else:
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -128,11 +123,10 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
-            if error != error_shipped:
-                # send_message(bot, message)
-                print(error)
+            if str(error) != str(error_shipped):
+                send_message(bot, message)
             error_shipped = error
-        else:
+        finally:
             time.sleep(TIME_SLEEP)
 
 
