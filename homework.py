@@ -77,6 +77,7 @@ def get_api_answer(timestamp):
 
 def check_response(response):
     """Проверяет ответ API."""
+    # pprint(response)
     if not isinstance(response, dict):
         raise TypeError(
             f'ответ сервера, не является словарем {type(response)}'
@@ -110,7 +111,7 @@ def main():
     """Основная логика работы бота."""
     # Создаем объект класса бота
     bot = TeleBot(token=TELEGRAM_TOKEN)
-    timestamp = int((datetime.now() - timedelta(days=2)).timestamp())
+    timestamp = int((datetime.now() - timedelta(days=30)).timestamp())
     check_tokens()
     status = None
     error_shipped = None
