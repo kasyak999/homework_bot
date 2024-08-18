@@ -44,9 +44,10 @@ def check_tokens():
 def send_message(bot, message):
     """Ответ бота."""
     try:
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-    except apihelper.ApiTelegramException:
-        raise
+        bot.send_message(chat_id='TELEGRAM_CHAT_ID', text=message)
+    except apihelper.ApiTelegramException as error:
+        message = f'ошибка телграм бота {error}'
+        raise Exception(message) from error
     else:
         logging.debug('Сообщение отправлено')
 
