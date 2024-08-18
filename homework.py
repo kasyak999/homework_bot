@@ -28,28 +28,28 @@ HOMEWORK_VERDICTS = {
 def check_tokens():
     """Проверка переменых окружения."""
     if not globals()['PRACTICUM_TOKEN']:
-        mistake = 'Токен практикума не задан в файле .env'
+        mistake = 'Токен практикума PRACTICUM_TOKEN, не задан в файле .env'
         logging.critical(mistake)
         raise ValueError(mistake)
     elif not globals()['TELEGRAM_TOKEN']:
-        mistake = 'Токен телеграм бота не задан в файле .env'
+        mistake = 'Токен телеграм бота TELEGRAM_TOKEN, не задан в файле .env'
         logging.critical(mistake)
         raise ValueError(mistake)
     elif not globals()['TELEGRAM_CHAT_ID']:
-        mistake = 'chat_id не задан в файле .env'
+        mistake = 'TELEGRAM_CHAT_ID не задан в файле .env'
         logging.critical(mistake)
         raise ValueError(mistake)
+    logging.debug('Все переменные окружения присутствуют в файле .env')
 
 
 def send_message(bot, message):
     """Ответ бота."""
     try:
         bot.send_message(chat_id=globals()['TELEGRAM_CHAT_ID'], text=message)
+        logging.debug('Сообщение отправлено')
     except apihelper.ApiTelegramException as error:
         message = f'ошибка телграм бота {error}'
         raise Exception(message) from error
-    else:
-        logging.debug('Сообщение отправлено')
 
 
 def get_api_answer(timestamp):
@@ -64,6 +64,7 @@ def get_api_answer(timestamp):
             raise requests.exceptions.HTTPError(
                 f'код ответа Api {homework_statuses.status_code}'
             )
+        return homework_statuses.json()
     except requests.RequestException as error:
         message = f''' Ошибка при запросе к API
             url={globals()['ENDPOINT']},
@@ -71,8 +72,6 @@ def get_api_answer(timestamp):
             params={payload}.
             {error}'''
         raise Exception(message) from error
-    else:
-        return homework_statuses.json()
 
 
 def check_response(response):
@@ -101,10 +100,9 @@ def parse_status(homework):
                 'в ответе сервера нет значения homework_name.'
             )
         verdict = globals()['HOMEWORK_VERDICTS'][homework.get('status')]
+        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
         raise KeyError('Статус не определен')
-    else:
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
