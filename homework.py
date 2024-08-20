@@ -162,7 +162,9 @@ if __name__ == '__main__':
         ),
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler(filename=__file__ + '.log', mode='w', encoding='utf-8'),
+            logging.FileHandler(
+                filename=__file__ + '.log', mode='w', encoding='utf-8'
+            ),
         ],
     )
     main()
