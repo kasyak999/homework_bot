@@ -14,7 +14,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses1/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 TIME_SLEEP = 10 * 60
 
@@ -23,33 +23,47 @@ HOMEWORK_VERDICTS = {
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
+ERROR_GLOBAL = {
+    'PRACTICUM_TOKEN': (
+        'Токен практикума PRACTICUM_TOKEN, не задан в файле .env'
+    ),
+    'TELEGRAM_TOKEN': (
+        'Токен телеграм бота TELEGRAM_TOKEN, не задан в файле .env'
+    ),
+    'TELEGRAM_CHAT_ID': 'TELEGRAM_CHAT_ID не задан в файле .env',
+    'errors': 'Не все переменные окружения заданы.',
+    'ok': 'Все переменные окружения присутствуют в файле .env'
+}
+BOT_MESSAGE = {
+    'error': 'ошибка телграм бота\n{error}',
+    'ok': 'Сообщение отправлено',
+}
 
 
 def check_tokens():
     """Проверка переменых окружения."""
+    errors = []
     if not globals()['PRACTICUM_TOKEN']:
-        mistake = 'Токен практикума PRACTICUM_TOKEN, не задан в файле .env'
-        logging.critical(mistake)
-        raise ValueError(mistake)
-    elif not globals()['TELEGRAM_TOKEN']:
-        mistake = 'Токен телеграм бота TELEGRAM_TOKEN, не задан в файле .env'
-        logging.critical(mistake)
-        raise ValueError(mistake)
-    elif not globals()['TELEGRAM_CHAT_ID']:
-        mistake = 'TELEGRAM_CHAT_ID не задан в файле .env'
-        logging.critical(mistake)
-        raise ValueError(mistake)
-    logging.debug('Все переменные окружения присутствуют в файле .env')
+        errors.append(ERROR_GLOBAL['PRACTICUM_TOKEN'])
+    if not globals()['TELEGRAM_TOKEN']:
+        errors.append(ERROR_GLOBAL['TELEGRAM_TOKEN'])
+    if not globals()['TELEGRAM_CHAT_ID']:
+        errors.append(ERROR_GLOBAL['TELEGRAM_CHAT_ID'])
+
+    if errors:
+        for error in errors:
+            logging.critical(error)
+        raise ValueError(ERROR_GLOBAL['errors'])
+    logging.debug(ERROR_GLOBAL['ok'])
 
 
 def send_message(bot, message):
     """Ответ бота."""
     try:
         bot.send_message(chat_id=globals()['TELEGRAM_CHAT_ID'], text=message)
-        logging.debug('Сообщение отправлено')
+        logging.debug(BOT_MESSAGE['ok'])
     except apihelper.ApiTelegramException as error:
-        message = f'ошибка телграм бота\n{error}'
-        raise Exception(message) from error
+        raise UserWarning(BOT_MESSAGE['error'].format(error=error)) from error
 
 
 def get_api_answer(timestamp):
@@ -57,7 +71,7 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         homework_statuses = requests.get(
-            url=globals()['ENDPOINT'], headers=globals()['HEADERS'],
+            url=ENDPOINT, headers=HEADERS,
             params=payload
         )
         if homework_statuses.status_code != 200:
@@ -67,11 +81,9 @@ def get_api_answer(timestamp):
         return homework_statuses.json()
     except requests.RequestException as error:
         message = f''' Ошибка при запросе к API
-            url={globals()['ENDPOINT']},
-            headers={globals()['HEADERS']},
-            params={payload}.
+            url={ENDPOINT}, headers={HEADERS}, params={payload}.
             {error}'''
-        raise Exception(message) from error
+        raise RuntimeWarning(message) from error
 
 
 def check_response(response):
@@ -99,7 +111,7 @@ def parse_status(homework):
             raise ValueError(
                 'в ответе сервера нет значения homework_name.'
             )
-        verdict = globals()['HOMEWORK_VERDICTS'][homework.get('status')]
+        verdict = HOMEWORK_VERDICTS[homework.get('status')]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
         raise KeyError('Статус не определен')
