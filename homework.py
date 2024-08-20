@@ -8,6 +8,7 @@ import time
 import sys
 # from pprint import pprint
 from http import HTTPStatus
+from json import JSONDecodeError
 
 
 load_dotenv()
@@ -27,6 +28,7 @@ HOMEWORK_VERDICTS = {
 }
 
 MESSAGE = {
+    'json_error': 'не соответствуют JSON-формату \n{}',
     'error_global': 'Токен практикума PRACTICUM_TOKEN, не задан в файле .env',
     'error_global1': (
         'Токен телеграм бота TELEGRAM_TOKEN, не задан в файле .env'
@@ -84,16 +86,17 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         homework_statuses = requests.get(
-            url=ENDPOINT, headers=HEADERS,
-            params=payload
+            url=ENDPOINT, headers=HEADERS, params=payload
         )
         result = homework_statuses.json()
+    except JSONDecodeError as error:
+        raise RuntimeWarning(MESSAGE['json_error'].format(error)) from error
     except requests.RequestException as error:
         message = MESSAGE['api_error1'].format(
             ENDPOINT, HEADERS, payload, error
         )
         raise RuntimeWarning(message) from error
-    if not HTTPStatus.OK:
+    if homework_statuses.status_code != HTTPStatus.OK:
         raise requests.exceptions.HTTPError(
             MESSAGE['api_error'].format(homework_statuses.status_code)
         )
@@ -159,7 +162,7 @@ if __name__ == '__main__':
         ),
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler(filename=__file__ + '.log', mode='w'),
+            logging.FileHandler(filename=__file__ + '.log', mode='w', encoding='utf-8'),
         ],
     )
     main()
