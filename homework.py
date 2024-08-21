@@ -54,7 +54,7 @@ def send_message(bot, message):
     except apihelper.ApiTelegramException as error:
         raise ConnectionError(MESSAGE['bot_error'].format(error)) from error
 
-
+#
 def get_api_answer(timestamp):
     """Обращение к API."""
     payload = {'from_date': timestamp}
