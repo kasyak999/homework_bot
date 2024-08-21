@@ -11,7 +11,7 @@ from http import HTTPStatus
 from json import JSONDecodeError
 from message import MESSAGE
 
-
+#
 load_dotenv()
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
