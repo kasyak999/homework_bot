@@ -9,6 +9,7 @@ import sys
 # from pprint import pprint
 from http import HTTPStatus
 from json import JSONDecodeError
+from message import MESSAGE
 
 
 load_dotenv()
@@ -25,33 +26,6 @@ HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
-}
-
-MESSAGE = {
-    'json_error': 'не соответствуют JSON-формату \n{}',
-    'error_global': 'Токен практикума PRACTICUM_TOKEN, не задан в файле .env',
-    'error_global1': (
-        'Токен телеграм бота TELEGRAM_TOKEN, не задан в файле .env'
-    ),
-    'error_global2': 'TELEGRAM_CHAT_ID не задан в файле .env',
-    'error_global3': 'Не все переменные окружения заданы.',
-    'error_global_ok': 'Все переменные окружения присутствуют в файле .env',
-    'bot_error': 'ошибка телграм бота\n{}',
-    'bot_ok': 'Сообщение отправлено',
-    'api_error': 'код ответа Api {}',
-    'api_error1': (
-        'Ошибка при запросе к API \nurl={}, headers={}, params={}.\n{}'
-    ),
-    'api_error2': 'в ответе сервера нет значения homework_name.',
-    'no_dict': 'ответ сервера, не является словарем {}',
-    'no_list': 'ответ сервера, homeworks не является списком {}',
-    'no_info': 'в ответе сервера нет информации.',
-    'status_message': (
-        'Изменился статус проверки работы "{}". {}'
-    ),
-    'not_status': 'Статус не определен',
-    'status_changed': 'Статус изменился.',
-    'error_messages': 'Сбой в работе программы: {}'
 }
 
 
@@ -75,10 +49,10 @@ def check_tokens():
 def send_message(bot, message):
     """Ответ бота."""
     try:
-        bot.send_message(chat_id=globals()['TELEGRAM_CHAT_ID'], text=message)
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug(MESSAGE['bot_ok'])
     except apihelper.ApiTelegramException as error:
-        raise UserWarning(MESSAGE['bot_error'].format(error)) from error
+        raise ConnectionError(MESSAGE['bot_error'].format(error)) from error
 
 
 def get_api_answer(timestamp):
@@ -88,19 +62,21 @@ def get_api_answer(timestamp):
         homework_statuses = requests.get(
             url=ENDPOINT, headers=HEADERS, params=payload
         )
-        result = homework_statuses.json()
     except JSONDecodeError as error:
-        raise RuntimeWarning(MESSAGE['json_error'].format(error)) from error
+        raise ConnectionRefusedError(
+            MESSAGE['json_error'].format(error)
+        ) from error
     except requests.RequestException as error:
         message = MESSAGE['api_error1'].format(
             ENDPOINT, HEADERS, payload, error
         )
-        raise RuntimeWarning(message) from error
+        raise ConnectionError(message) from error
+
     if homework_statuses.status_code != HTTPStatus.OK:
-        raise requests.exceptions.HTTPError(
+        raise ConnectionError(
             MESSAGE['api_error'].format(homework_statuses.status_code)
         )
-    return result
+    return homework_statuses.json()
 
 
 def check_response(response):
