@@ -9,9 +9,9 @@ import sys
 # from pprint import pprint
 from http import HTTPStatus
 from json import JSONDecodeError
-from message import MESSAGE
+import message as m
 
-#
+
 load_dotenv()
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -33,26 +33,26 @@ def check_tokens():
     """Проверка переменых окружения."""
     errors = []
     if not globals()['PRACTICUM_TOKEN']:
-        errors.append(MESSAGE['error_global'])
+        errors.append(m.ERROR_GLOBAL)
     if not globals()['TELEGRAM_TOKEN']:
-        errors.append(MESSAGE['error_global1'])
+        errors.append(m.ERROR_GLOBAL1)
     if not globals()['TELEGRAM_CHAT_ID']:
-        errors.append(MESSAGE['error_global2'])
+        errors.append(m.ERROR_GLOBAL2)
 
     if errors:
         for error in errors:
             logging.critical(error)
-        raise ValueError(MESSAGE['error_global3'])
-    logging.debug(MESSAGE['error_global_ok'])
+        raise ValueError(m.ERROR_GLOBAL3)
+    logging.debug(m.ERROR_GLOBAL_OK)
 
 
 def send_message(bot, message):
     """Ответ бота."""
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-        logging.debug(MESSAGE['bot_ok'])
+        logging.debug(m.BOT_OK)
     except apihelper.ApiTelegramException as error:
-        raise ConnectionError(MESSAGE['bot_error'].format(error)) from error
+        raise ConnectionError(m.BOR_ERROR.format(error)) from error
 
 
 def get_api_answer(timestamp):
@@ -62,32 +62,33 @@ def get_api_answer(timestamp):
         homework_statuses = requests.get(
             url=ENDPOINT, headers=HEADERS, params=payload
         )
-    except JSONDecodeError as error:
-        raise ConnectionRefusedError(
-            MESSAGE['json_error'].format(error)
-        ) from error
     except requests.RequestException as error:
-        message = MESSAGE['api_error1'].format(
+        message = m.API_ERROR1.format(
             ENDPOINT, HEADERS, payload, error
         )
         raise ConnectionError(message) from error
 
     if homework_statuses.status_code != HTTPStatus.OK:
         raise ConnectionError(
-            MESSAGE['api_error'].format(homework_statuses.status_code)
+            m.API_ERROR.format(homework_statuses.status_code)
         )
-    return homework_statuses.json()
+    try:
+        return homework_statuses.json()
+    except JSONDecodeError as error:
+        raise ConnectionRefusedError(
+            m.JSON_ERROR.format(error)
+        ) from error
 
 
 def check_response(response):
     """Проверяет ответ API."""
     if not isinstance(response, dict):
-        raise TypeError(MESSAGE['no_dict'].format(type(response)))
+        raise TypeError(m.NO_DICT.format(type(response)))
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
-        raise TypeError(MESSAGE['no_list'].format(type(homeworks)))
+        raise TypeError(m.NO_LIST.format(type(homeworks)))
     if not homeworks:
-        raise TypeError(MESSAGE['no_info'])
+        raise TypeError(m.NO_INFO)
     return homeworks[0]
 
 
@@ -96,11 +97,11 @@ def parse_status(homework):
     try:
         homework_name = homework.get('homework_name')
         if not homework.get('homework_name'):
-            raise ValueError(MESSAGE['api_error2'])
+            raise ValueError(m.API_ERROR2)
         verdict = HOMEWORK_VERDICTS[homework.get('status')]
-        return MESSAGE['status_message'].format(homework_name, verdict)
+        return m.STATUS_MESSAGE.format(homework_name, verdict)
     except KeyError:
-        raise KeyError(MESSAGE['not_status'])
+        raise KeyError(m.NOT_STATUS)
 
 
 def main():
@@ -116,10 +117,10 @@ def main():
             answer_api = check_response(get_api_answer(timestamp))
             if status != answer_api.get('status'):
                 send_message(bot, parse_status(answer_api))
-                logging.debug(MESSAGE['status_changed'])
+                logging.debug(m.STATUS_CHANGED)
             status = answer_api.get('status')
         except Exception as error:
-            message = MESSAGE['error_messages'].format(error)
+            message = m.ERROR_MESSAGE.format(error)
             logging.error(message)
             if str(error) != str(error_shipped):
                 send_message(bot, message)
